@@ -1,122 +1,122 @@
 from Matrix import Matrix
 import random
 
+MIN_COINS = 10
+POINT = 10
+WINNING_SCORE = 100
+
+
 class GoldRush(Matrix):
+    WALL = "wall"
+    COIN = "coin"
+    EMPTY = "."
+
     def __init__(self, rows, cols):
         super().__init__(rows, cols)
-        self.s1 = 0
-        self.s2 = 0
-        self.win = ""
-        self.coins = 0
+        self.player1_score = 0
+        self.player2_score = 0
+        self.winner = ""
+        self.total_coins = 0
 
     def load_board(self):
-        if self.rows == 0 and self.cols == 0:
+        if self.rows == 0 or self.cols == 0:
             self.matrix = []
             return
 
         self.matrix = []
-        elements = ["coin", ".", "wall"]
-        coins = 0
+        elements = [self.COIN, self.EMPTY, self.WALL]
+        coin_count = 0
 
         for i in range(self.rows):
-            self.matrix.append([])
+            row = []
             for j in range(self.cols):
-                if i % 2 != 0:
-                    rand_index = random.randint(0, 1)
-                    rand_element = elements[rand_index]
-                    self.matrix[i].append(rand_element)
-                    if rand_element == "coin":
-                        coins += 1
-                else:
-                    wall_index = 2
-                    wall = elements[wall_index]
-                    self.matrix[i].append(wall)
+                element = self._generate_element(i, elements)
+                row.append(element)
+                if element == self.COIN:
+                    coin_count += 1
+            self.matrix.append(row)
 
-            rand = random.randint(1, 2)
-            for k in range(1, self.cols, rand):
-                rand += 1
-                rand_index = random.randint(0, 1)
-                rand_element = elements[rand_index]
-                self.matrix[i][k] = rand_element
-                if rand_element == "coin":
-                    coins += 1
+        self._adjust_for_coins(coin_count)
 
         self.matrix[0][0] = "player1"
-        self.matrix[self.rows - 1][self.cols - 1] = "player2"
-        self.coins = coins
+        self.matrix[-1][-1] = "player2"
+        self.total_coins = coin_count
 
-        if coins < 10:
+        if coin_count < MIN_COINS:
             return self.load_board()
-        else:
-            return self.matrix
 
-    def _check_win(self, player):
-        player_num = player[-1]
-        score = getattr(self, f"s{player_num}")
-        if score == 100:
-            self.win = player
-            return self.win
+        return self.matrix
 
-    def _check_other_player(self, player):
-        otherPlayer = None
-        if player == "player1":
-            otherPlayer = "player2"
-            return otherPlayer
-        elif player == "player2":
-            otherPlayer = "player1"
-            return otherPlayer
-        
+    def _generate_element(self, row_index, elements):
+        if row_index % 2 == 0:
+            return self.WALL
+        return random.choice(elements[:-1])
 
-    def _move(self, curr_row, curr_col, player, delta_row, delta_col):
-        other_player = self._check_other_player(player)
-        new_row, new_col = curr_row + delta_row, curr_col + delta_col
+    def _adjust_for_coins(self, coin_count):
+        """Ensures the board has sufficient coins."""
+        if coin_count < MIN_COINS:
+            self.load_board()
+
+    def move_player(self, player, direction):
+        current_position = self._find_player_position(player)
+        if current_position:
+            row, col = current_position
+            move_methods = {
+                "up": self._move_up,
+                "down": self._move_down,
+                "left": self._move_left,
+                "right": self._move_right
+            }
+            move_function = move_methods.get(direction)
+            if move_function:
+                move_function(row, col, player)
+
+    def _find_player_position(self, player):
+        for i, row in enumerate(self.matrix):
+            for j, value in enumerate(row):
+                if value == player:
+                    return i, j
+        return None
+
+    def _move(self, row, col, player, delta_row, delta_col):
+        other_player = self._get_other_player(player)
+        new_row, new_col = row + delta_row, col + delta_col
 
         if not (0 <= new_row < self.rows and 0 <= new_col < self.cols):
             return
 
-        if self.matrix[new_row][new_col] not in ["wall", other_player]:
-            if self.matrix[new_row][new_col] == "coin":
-                self._score(player)
-
-            self.matrix[curr_row][curr_col] = "."
+        if self.matrix[new_row][new_col] not in [self.WALL, other_player]:
+            if self.matrix[new_row][new_col] == self.COIN:
+                self._increase_score(player)
+            self.matrix[row][col] = self.EMPTY
             self.matrix[new_row][new_col] = player
 
         return self._check_win(player)
 
-    def _move_down(self, curr_row, curr_col, player):
-        return self._move(curr_row, curr_col, player, 1, 0)
+    def _get_other_player(self, player):
+        return "player2" if player == "player1" else "player1"
 
-    def _move_up(self, curr_row, curr_col, player):
-        return self._move(curr_row, curr_col, player, -1, 0)
+    def _move_up(self, row, col, player):
+        return self._move(row, col, player, -1, 0)
 
-    def _move_right(self, curr_row, curr_col, player):
-        return self._move(curr_row, curr_col, player, 0, 1)
+    def _move_down(self, row, col, player):
+        return self._move(row, col, player, 1, 0)
 
-    def _move_left(self, curr_row, curr_col, player):
-        return self._move(curr_row, curr_col, player, 0, -1)
+    def _move_left(self, row, col, player):
+        return self._move(row, col, player, 0, -1)
 
-    def move_player(self, player, direction):
-        curr_row, curr_col = None, None
+    def _move_right(self, row, col, player):
+        return self._move(row, col, player, 0, 1)
 
-        for i, row in enumerate(self.matrix):
-            for j, value in enumerate(row):
-                if value == player:
-                    curr_row, curr_col = i, j
-                    break
-            if curr_row is not None:
-                break
+    def _increase_score(self, player):
+        if player == "player1":
+            self.player1_score += POINT
+        else:
+            self.player2_score += POINT
 
-        if direction == "down":
-            self._move_down(curr_row, curr_col, player)
-        elif direction == "up":
-            self._move_up(curr_row, curr_col, player)
-        elif direction == "right":
-            self._move_right(curr_row, curr_col, player)
-        elif direction == "left":
-            self._move_left(curr_row, curr_col, player)
+        print(f"{player} score: {getattr(self, f'player{player[-1]}_score')}")
 
-    def _score(self, player):
-        player_num = player[-1]
-        score_attr = f"s{player_num}"
-        setattr(self, score_attr, getattr(self, score_attr) + 10)
-        print(getattr(self, score_attr))
+    def _check_win(self, player):
+        if getattr(self, f'player{player[-1]}_score') >= WINNING_SCORE:
+            self.winner = player
+            return self.winner
