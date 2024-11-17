@@ -5,7 +5,6 @@ MIN_COINS = 10
 POINT = 10
 WINNING_SCORE = 100
 
-
 class GoldRush(Matrix):
     WALL = "wall"
     COIN = "coin"
@@ -19,6 +18,7 @@ class GoldRush(Matrix):
         self.total_coins = 0
 
     def load_board(self):
+        """Initializes the board with a random distribution of walls, coins, and empty spaces."""
         if self.rows == 0 or self.cols == 0:
             self.matrix = []
             return
@@ -30,16 +30,14 @@ class GoldRush(Matrix):
         for i in range(self.rows):
             row = []
             for j in range(self.cols):
-                element = self._generate_element(i, elements)
+                element = self._generate_element(elements)
                 row.append(element)
                 if element == self.COIN:
                     coin_count += 1
             self.matrix.append(row)
 
+        self._place_players()
         self._adjust_for_coins(coin_count)
-
-        self.matrix[0][0] = "player1"
-        self.matrix[-1][-1] = "player2"
         self.total_coins = coin_count
 
         if coin_count < MIN_COINS:
@@ -47,17 +45,20 @@ class GoldRush(Matrix):
 
         return self.matrix
 
-    def _generate_element(self, row_index, elements):
-        if row_index % 2 == 0:
-            return self.WALL
-        return random.choice(elements[:-1])
+    def _generate_element(self, elements):
+        """Randomly chooses an element to place on the board."""
+        return random.choice(elements)
+
+    def _place_players(self):
+        """Places the players on the board."""
+        self.matrix[0][0] = "player1"
+        self.matrix[self.rows - 1][self.cols - 1] = "player2"
 
     def _adjust_for_coins(self, coin_count):
-        """Ensures the board has sufficient coins."""
         if coin_count < MIN_COINS:
             self.load_board()
 
-    def move_player(self, player, direction):
+    def move_player_in_direction(self, player, direction):
         current_position = self._find_player_position(player)
         if current_position:
             row, col = current_position
