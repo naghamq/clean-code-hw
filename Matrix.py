@@ -26,14 +26,14 @@ class Matrix:
                 return {'x': r, 'y': c}
         return None
 
-    def get(self, row_num, col_num):
+    def get_value(self, row_num, col_num):
         return self.matrix[row_num][col_num]
 
     def print_row(self, row_num):
         for c in self.matrix[row_num]:
             print(c)
 
-    def alter(self, row_num, col_num, new_value):
+    def update_value(self, row_num, col_num, new_value):
         self.matrix[row_num][col_num] = new_value
 
 
